@@ -10,11 +10,14 @@ public class Evaluator {
 
     public ArrayList<Token> tokenize(String str) {
         ArrayList<Token> tokens = new ArrayList<Token>();
+        ArrayList<String> variables = new ArrayList<String>();
+        ArrayList<Double> variableValues = new ArrayList<Double>();
 
         for (int i = 0; i < str.length(); i++) {
             String token = str.substring(i, i + 1);
 
             boolean isNumber = token.matches("[0-9.]");
+            boolean isLetter = token.matches("[a-zA-Z]");
             boolean isOperator = token.matches("[+\\-*/%^()]");
 
             if (isNumber) {
@@ -23,17 +26,28 @@ public class Evaluator {
                     j++;
                 }
 
-                tokens.add(new Token("number", str.substring(i, j)));
+                tokens.add(new Token("number", str.substring(i, j), 0));
                 i = j - 1;
+            } else if (isLetter) {
+                double val;
+                if(variables.contains(token)) {
+                    val = variableValues.get(variables.indexOf(token));
+                } else {
+                    String inp = System.console().readLine(token + "= ");
+                    val = Double.parseDouble(inp);
+                    variables.add(token);
+                    variableValues.add(val);
+                }
+                tokens.add(new Token("variable", token, val));
             } else if (isOperator) {
-                tokens.add(new Token("operator", token));
+                tokens.add(new Token("operator", token, 0));
             }
         }
 
         for (int i = 0; i < tokens.size() - 1; i++) {
-            if (tokens.get(i).type.equals("number") || tokens.get(i).lexeme.equals(")")) {
-                if (tokens.get(i + 1).lexeme.equals("(")) {
-                    tokens.add(i + 1, new Token("operator", "*"));
+            if (tokens.get(i).type.equals("number") || tokens.get(i).lexeme.equals(")") || tokens.get(i).type.equals("variable")) {
+                if (tokens.get(i + 1).lexeme.equals("(") || tokens.get(i + 1).type.equals("variable")) {
+                    tokens.add(i + 1, new Token("operator", "*", 0));
                 }
             }
         }
@@ -47,6 +61,8 @@ public class Evaluator {
 
         for (Token token : tokens) {
             if (token.type.equals("number")) {
+                outputQueue.add(token);
+            } else if (token.type.equals("variable")) {
                 outputQueue.add(token);
             } else if (token.type.equals("operator")) {
                 if (token.lexeme.equals("(")) {
@@ -88,6 +104,8 @@ public class Evaluator {
         for (Token token : postfix) {
             if (token.type.equals("number")) {
                 stack.add(Double.parseDouble(token.lexeme));
+            } else if(token.type.equals("variable")) {
+                stack.add(token.value);
             } else if (token.type.equals("operator")) {
                 double operand2 = stack.get(stack.size() - 1);
                 stack.remove(stack.size() - 1);
